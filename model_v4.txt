@@ -1,0 +1,55 @@
+reset;
+
+model;
+
+# Index set for events
+param n; # number of event durations considered
+set eventDurations:= 1 .. n;
+
+# Parameters
+param d{eventDurations}; # duration of events in hours
+param c{eventDurations}; # annual or remaining count of events by duration
+param r{eventDurations}; # hourly rate in dollars for events
+param B; # budget for events in dollars, annual or remaining
+param N; # number of fire-fighters available
+
+# Variables
+var x{eventDurations} integer >= 0; # number of fire=fighters allocated to each event by event duration
+var f >= 0;
+
+maximize function: f;
+
+subject to
+c1{j in eventDurations}: r[j] * d[j] * c[j] * x[j] >= f; # distributing costs across events
+c2: sum{j in eventDurations} r[j] * d[j] * c[j] * x[j] <= B; # constraining the total cost to be less than the budget
+c3{j in eventDurations}: x[j] <= N; # constraining the number of fire-fighters per event less than total available
+c4{j in eventDurations}: x[j] >= 2; # constraining the number of fire-fighters a minimum per event
+c5: -x[1] + x[4] <= 6; # long duration events should never get more than 6 FF more than short duration events
+c6: -x[1] + x[3] <= 6; # long duration events should never get more than 6 FF more than short duration events
+c7: -x[2] + x[4] <= 6; # long duration events should never get more than 6 FF more than short duration events
+c8: -x[2] + x[3] <= 6; # long duration events should never get more than 6 FF more than short duration events
+c9: -x[1] + x[5] <= 2; # paying events should never get more than 2 more FF than non-paying events
+c10: -x[2] + x[6] <= 2; # paying events should never get more than 2 more FF than non-paying events
+c11: -x[3] + x[7] <= 2; # paying events should never get more than 2 more FF than non-paying events
+c12: -x[4] + x[8] <= 2; # paying events should never get more than 2 more FF than non-paying events
+
+data;
+param n:= 8; # number of event types by duration: 2, 4, 6, and 8 hours 
+param d:= 1 2 2 4 3 6 4 8 5 2 6 4 7 6 8 8; # event durations: 2, 4, 6, and 8 hours
+param c:= 1 384 2 123 3 46 4 7 5 383 6 123 7 45 8 6; # count of events by duration
+param r:= 1 56.82 2 56.82 3 56.82 4 56.82 5 36.82 6 36.82 7 36.82 8 36.82; # hourly rate in dollars for events
+param B:= 428000; # budget for events in dollars, annual or remaining
+param N:= 60; # number of fire-fighters available on a shift
+
+option presolve 0;
+option solver cplex; 
+option cplex_options 'presolve 0 sensitivity';
+solve;
+display f, x;
+display c1.dual, c1.slack, c1.down, c1.current, c1.up;
+display c2.dual, c2.slack, c2.down, c2.current, c2.up;
+display c3.dual, c3.slack, c3.down, c3.current, c3.up;
+display c4.dual, c4.slack, c4.down, c4.current, c4.up;
+
+display _varname, _var, _var.rc, _var.down, _var.current, _var.up; # variables
+display _conname, _con.body, _con.slack, _con.dual, _con.down, _con.current, _con.up; # constraints
